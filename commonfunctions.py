@@ -158,13 +158,23 @@ def key_to_symbol(key):
 def atomicnumber_to_symbolmod(atomicnumber, enumber, paramdic):
     symbol = atomicnumber_to_symbol(atomicnumber)
     try:
-        umbral = paramdic["e@"+symbol + ".b"]
-        if enumber > umbral:
+        umbralb = paramdic["e@"+symbol + ".b"]
+        umbrala =  paramdic["e@"+symbol + ".a"]
+        if  enumber > umbralb:
+            mod = "c"
+        elif umbrala < enumber <= umbralb:
             mod = "b"
         else:
             mod = "a"
     except:
-        mod = "a"   #"a" is the default mod
+        try:
+            umbral = paramdic["e@"+symbol + ".a"]
+            if enumber > umbral:
+                mod = "b"
+            else:
+                mod = "a"
+        except:
+            mod = "a"   #"a" is the default mod
     return symbol + "." + mod
         
         
@@ -324,6 +334,7 @@ def np_calc(cosmoparamlist,paramdic,nptype,yrel,electronlist=None):
         cavitationterm = 0
         i = 0
         rsolv = paramdic["rsolv@"]
+       
         
         for atomicnumber,cosmoarea in cosmoparamlist:
             symbolmod = atomicnumber_to_symbolmod(atomicnumber,electronlist[i],paramdic)
@@ -364,6 +375,7 @@ def np_calc(cosmoparamlist,paramdic,nptype,yrel,electronlist=None):
         i = 0
         rsolv = paramdic["rsolv@"]
         npterm = 0
+           
         for atomicnumber,cosmoarea in cosmoparamlist:
             symbolmod = atomicnumber_to_symbolmod(atomicnumber,electronlist[i],paramdic)
             gkey = "g@" + symbolmod
