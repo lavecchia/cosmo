@@ -203,38 +203,53 @@ if cfg.has_option("system", "fixlist"):
     fixlist = cfg.get("system", "fixlist").split()
     varlist.append("fixlist")
 
+#set the formats of optimization, step1 p1 p2 p3 pn N, where p1...pn are paremeters, and N number of cycles.
 stepslist = []
-if cfg.has_option("system", "step1"):
-    stepall = cfg.get("system", "step1").split()
-    stepcycles = int(stepall.pop())
-    step1 = [stepall,stepcycles]
-    stepslist.append(step1)
-
-if cfg.has_option("system", "step2"):
-    stepall = cfg.get("system", "step2").split()
-    stepcycles = int(stepall.pop())
-    step2 = [stepall,stepcycles]
-    stepslist.append(step2)
-
-if cfg.has_option("system", "step3"):
-    stepall = cfg.get("system", "step3").split()
-    stepcycles = int(stepall.pop())
-    step3 = [stepall,stepcycles]
-    stepslist.append(step3)
-
-if cfg.has_option("system", "step4"):
-    stepall = cfg.get("system", "step4").split()
-    stepcycles = int(stepall.pop())
-    step4 = [stepall,stepcycles]
-    stepslist.append(step4)
-varlist.append("stepslist")
-
-if cfg.has_option("system", "step5"):
-    stepall = cfg.get("system", "step5").split()
-    stepcycles = int(stepall.pop())
-    step5 = [stepall,stepcycles]
-    stepslist.append(step5)
-varlist.append("stepslist")
+try:
+    for n in range(1,1000): #max of 1000 optimization step formats
+        if cfg.has_option("system", "step" + str(n)):
+            stepall = cfg.get("system", "step"+str(n)).split()
+            stepcycles = int(stepall.pop())
+            stepslist.append([stepall,stepcycles]) #store: parameters, number of cycles
+except: 
+    if len(stepslist)==0:
+        print "ERROR: You must define step settings in config.in, eg. step1 = p1 p2 p3 100 where p1, p2, p3 are parameters to optimize, and 100 the number of cycles per step."
+        exit()
+    else:
+        varlist.append("stepslist")
+    
+#~ if cfg.has_option("system", "step1"):
+    #~ stepall = cfg.get("system", "step1").split()
+    #~ stepcycles = int(stepall.pop())
+    #~ step1 = [stepall,stepcycles]
+    #~ stepslist.append(step1)
+#~ 
+#~ if cfg.has_option("system", "step2"):
+    #~ stepall = cfg.get("system", "step2").split()
+    #~ stepcycles = int(stepall.pop())
+    #~ step2 = [stepall,stepcycles]
+    #~ stepslist.append(step2)
+#~ 
+#~ if cfg.has_option("system", "step3"):
+    #~ stepall = cfg.get("system", "step3").split()
+    #~ stepcycles = int(stepall.pop())
+    #~ step3 = [stepall,stepcycles]
+    #~ stepslist.append(step3)
+#~ 
+#~ if cfg.has_option("system", "step4"):
+    #~ stepall = cfg.get("system", "step4").split()
+    #~ stepcycles = int(stepall.pop())
+    #~ step4 = [stepall,stepcycles]
+    #~ stepslist.append(step4)
+    #~ 
+#~ varlist.append("stepslist")
+#~ 
+#~ if cfg.has_option("system", "step5"):
+    #~ stepall = cfg.get("system", "step5").split()
+    #~ stepcycles = int(stepall.pop())
+    #~ step5 = [stepall,stepcycles]
+    #~ stepslist.append(step5)
+#~ varlist.append("stepslist")
 
 #~ limitdic={"radii":radiilimit, "gamma":gammalimit, "rsolv":rsolvlimit} #limits determine fix extremes of values center in "initial" values.
 rangesdic = {"radii":radiirange, "gamma":gammarange, "rsolv":rsolvrange, "eumbral":eumbralrange, "cosmoradii":cosmoradiirange, "k":krange} #moveable ranges, centers are "current" values in MC run
