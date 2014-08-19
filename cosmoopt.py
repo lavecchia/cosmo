@@ -33,8 +33,6 @@ parser.add_option("-i", "--initial", dest="paramfile", default=DEFPARAMFILE,
                   help="FILE to read values of params", metavar="PARAMETERS")
 parser.add_option("-r", "--ref", dest="reffilename", default=DEFREFFILE,
                   help="FILE to read values to comparate", metavar="FILE")
-#parser.add_option("-k", "--keys", dest="extrakeys", default=defextrakeys,
-#                  help="KEYS to run MOPAC software", metavar="KEYS")
 parser.add_option("-g", "--gasdir", dest="gasdir", default=DEFGASDIR,
                   help="GASDIR directory where take the gas calculation", metavar="GASDIR")
 parser.add_option("-t", "--templatedir", dest="templatedir", default=DEFTEMPLATEDIR,
@@ -56,7 +54,7 @@ if not cfg.read([options.configfile]):
 # VARS
 ###########
 varlist = [] #store name of vars to then print
-
+mcmarklist = [] #store the last mcmark to control the temperature in MC run
 #limits
 if cfg.has_option("limits", "radiilimit"):  
     radiilimit = float(cfg.get("limits", "radiilimit"))
@@ -218,38 +216,6 @@ except:
     else:
         varlist.append("stepslist")
     
-#~ if cfg.has_option("system", "step1"):
-    #~ stepall = cfg.get("system", "step1").split()
-    #~ stepcycles = int(stepall.pop())
-    #~ step1 = [stepall,stepcycles]
-    #~ stepslist.append(step1)
-#~ 
-#~ if cfg.has_option("system", "step2"):
-    #~ stepall = cfg.get("system", "step2").split()
-    #~ stepcycles = int(stepall.pop())
-    #~ step2 = [stepall,stepcycles]
-    #~ stepslist.append(step2)
-#~ 
-#~ if cfg.has_option("system", "step3"):
-    #~ stepall = cfg.get("system", "step3").split()
-    #~ stepcycles = int(stepall.pop())
-    #~ step3 = [stepall,stepcycles]
-    #~ stepslist.append(step3)
-#~ 
-#~ if cfg.has_option("system", "step4"):
-    #~ stepall = cfg.get("system", "step4").split()
-    #~ stepcycles = int(stepall.pop())
-    #~ step4 = [stepall,stepcycles]
-    #~ stepslist.append(step4)
-    #~ 
-#~ varlist.append("stepslist")
-#~ 
-#~ if cfg.has_option("system", "step5"):
-    #~ stepall = cfg.get("system", "step5").split()
-    #~ stepcycles = int(stepall.pop())
-    #~ step5 = [stepall,stepcycles]
-    #~ stepslist.append(step5)
-#~ varlist.append("stepslist")
 
 #~ limitdic={"radii":radiilimit, "gamma":gammalimit, "rsolv":rsolvlimit} #limits determine fix extremes of values center in "initial" values.
 rangesdic = {"radii":radiirange, "gamma":gammarange, "rsolv":rsolvrange, "eumbral":eumbralrange, "cosmoradii":cosmoradiirange, "k":krange} #moveable ranges, centers are "current" values in MC run
@@ -303,6 +269,8 @@ else:
     datadic = newdatadic
 
 fixlimitdic={}
+minlimitdic={}
+maxlimitdic={}
 for key, value in param0dic.iteritems():
     if "r@" in key:
         limitvalue = radiilimit
@@ -319,6 +287,8 @@ for key, value in param0dic.iteritems():
     else:
         limitvalue = 0
     fixlimitdic[key]=[value-limitvalue, value+limitvalue]
+    minlimitdic[key]=value-limitvalue
+    maxlimitdic[key]=value+limitvalue
 
 #make GAS phase calculation
 for key, value in datadic.iteritems():
@@ -455,6 +425,8 @@ if calculationtype == 'mc':
             shutil.rmtree(numberstep) # erase current directory
                 
             prob = np.random.rand()
+            
+
             if totalerror < currentstep[0] or prob < math.exp(-(totalerror-currentstep[0])/temperature):
                 mcmark = " @PROB\n"# mark that indicates this is a step selected by Monte Carlo because decent in energy
                 # "current" vars store last trajectory values of MC run.
@@ -466,81 +438,21 @@ if calculationtype == 'mc':
 
             outfile.write(mcmark) #end of line with a mark, @DESC: recenter because below value of function, @PROB: select from probability
 
+            #scale the temperature as function of times of @PROB mcmark
+            #mcmarklist store the n last mcmark
+            temperature, mcmarklist = temperature_control(temperature,mcmarklist,mcmark) 
+            print temperature 
+            print mcmarklist
+            
             acumcycle += 1
             
-#Genetic Algorithm run
-elif calculationtype == 'ga':
-    #initial generation
-    memberlist = []
-    for member in range(0,nmember):
-        memberparamdic = param0dic #initial parameters
-        #check restrictions, if not assign parameters again
-        tag1sttry = True # the first time into while loop
-        while (check_restrictions(memberparamdic,fixlimitdic)==0) or (tag1sttry == True):
-            tag1sttry = False # first time into while loop
-            # generate new values of parameters with a Gaussian distribution probability from current values
-            memberparamdic = [modified_values(currentstep[1], freeparamlist, rangesdic),None] #last element for score function
-            #fix values
-            try:
-                for key in fixlist:
-                    memberparamdic[key]=param0dic[key]
-            except:
-                pass
-            
-            rsolvtest = paramtestdic["rsolv@"] #take rsolv parameter 
-            if nptype=="claverie" or nptype=="claverietype":    
-                yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
-            else:
-                yrel = 0
-            
-            errorvalue, mad, datadic = calc_error(numberstep, minMAD, memberparamdic[0], datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
-            memberparamdic[1]=0
-            memberlist.append(memberparamdic)
 
-            if mad < minMAD:
-                minMAD = mad
-                # write summary file with the low MAD step
-                print_summary(mad,ncycle,datadic,nptype)
-        
-                # write parameter values
-                paramout = open("list_param.out","w")
-                for key, value in sorted(paramtestdic.iteritems()):
-                    paramout.write("%-3s \t %.3f\n" % (key,value))
-                paramout.close()
-            shutil.rmtree(numberstep) # erase current directory
-            
-            for generation in range(0,ngeneration):
-                newgeneration = genetic()
-           
-            outfile.write(mcmark) #end of line with a mark, @DESC: recenter because below value of function, @PROB: select from probability
-
-            mcmark = "\n"
-            
-            #number of step, to generate name of files
-            numberstep = next(step)
-            acumcycle += 1
             
             
 
 #print best cycle
 outfile.write("BEST CYCLE:\n")
 outfile.write(str(beststep[0])+str(beststep[1])+"\n")
-
-#bottom of report file
-#~ outfile.write("\n" + 20*"=" + "\n")
-#~ outfile.write("%-30s \t%s \t%s \t%s \t%s\n" % ("compoundname", "dgexp", "dgcalc", "error", "abserror"))
-
-#~ reportlist =[]
-#~ for nelement in range(0,len(dgrefdic)):
-    #~ reportlist.append([dgrefdic[nelement][0],dgrefdic[nelement][1],dgcalcdic[nelement],(dgrefdic[nelement][1]-dgcalcdic[nelement]), abs(dgrefdic[nelement][1]-dgcalcdic[nelement])])
-#~ reportlist.sort(reverse=True, key=lambda a: a[4])
-#~ 
-#~ tagfirst = True
-#~ for compoundname, dgexp, dgcalc, error, abserror in reportlist:
-    #~ outfile.write("%-30s \t%.2f \t%.2f \t%.2f \t%.2f\n" % (compoundname, dgexp, dgcalc, error, abserror))
-    #~ if abserror < 3.0 and tagfirst==True: # write ============ to divide error values under 3.0 kcal/mol
-        #~ outfile.write(10*"="+"\n") 
-        #~ tagfirst = False
         
 outfile.write("\n" + 20*"=" + "\n")
 outfile.write(str(datetime.datetime.now()))
@@ -549,7 +461,6 @@ outfile.write(" TOTAL TIME:" + str(time.time() - start_time) + "seconds")
 outfile.close() #close report file
 
 
-print beststep
 
 
 

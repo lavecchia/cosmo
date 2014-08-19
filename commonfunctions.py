@@ -306,7 +306,7 @@ def exec_commands(cmds, cores = DEFCORE):
         if not processes and not cmds:
             break
         else:
-            time.sleep(0.0001)
+            time.sleep(0.00001)
             
 
 
@@ -353,8 +353,9 @@ def np_calc(cosmoparamlist,paramdic,nptype,yrel,electronlist=None):
                     print "There is not radius defined (r@ or rc@) for " + symbolmod + ". Please check it"
                     exit()
             
+            #~ #~dispterm += gamma*cosmoarea
+            #~ dispterm += gamma*cosmoarea*(rsolv+radii)*(rsolv+radii)/(radii*radii) #change to scale SES area to SAS: (r+Rsolv)^2/r^2
             
-            dispterm += gamma*cosmoarea
             #~ cavitationterm += calc_pierotti(rsolv,radii,yrel)*cosmoarea/((radii+rsolv)*(radii+rsolv)*PI*4/3) # sum of Claverie terms
             cavitationterm += calc_pierotti(rsolv,radii,yrel)*cosmoarea/((radii)*(radii)*PI*4/3) # sum of Claverie terms
             i += 1
@@ -380,7 +381,18 @@ def np_calc(cosmoparamlist,paramdic,nptype,yrel,electronlist=None):
             symbolmod = atomicnumber_to_symbolmod(atomicnumber,electronlist[i],paramdic)
             gkey = "g@" + symbolmod
             gamma = paramdic[gkey]
+
+            #~ npterm += gamma*cosmoarea
+            try:
+                rkey = "rc@" + symbolmod
+                radii = paramdic[rkey]
+            except:
+                print "There is not radius defined (r@ or rc@) for " + symbolmod + ". Please check it"
+                exit()
+            
             npterm += gamma*cosmoarea
+            #~ npterm += gamma*cosmoarea*(rsolv+radii)*(rsolv+radii)/(radii*radii) #change to scale SES area to SAS: (r+Rsolv)^2/r^2
+            
             i += 1
         return npterm
     
@@ -464,7 +476,7 @@ def calc_error(numberstep, paramdic, datadic, extrakeys, extrakeyssolv, outfile,
     slope, intercept, r2 = fit_lineal(xdata,ydata) #linear fit
 
     
-    totalerror = mae #var to optimize
+    totalerror = rmse #var to optimize
     prevline = "%-5s Err: %3.4f MAE: %3.4f RMSE: %3.4f BIAS: %3.4f R2: %1.5f " % (numberstep, totalerror, mae, rmse, bias, r2)
     outfile.write(prevline + print_param(paramdic))
      
@@ -537,10 +549,10 @@ def check_restrictions(paramdic, fixlimitdic):
 #
 def make_gaussmodification(value0,rangevalue):
     #gauss
-    #~ return value0 + rangevalue * np.random.normal(0,0.2)
-    #~ 
-    #~ #uniform
-    return value0 + rangevalue * np.random.uniform(-1,1)
+    return value0 + rangevalue * np.random.normal(0,0.2)
+    
+    #uniform
+    #~ return value0 + rangevalue * np.random.uniform(-1,1)
 
 
 #  
@@ -604,6 +616,28 @@ def fit_lineal(x,y):
     slope, intercept, r_value, p_value, slope_std_error = stats.linregress(x, y)
     return slope, intercept, r_value*r_value
     
+# control MC temperature
+def temperature_control(temp,mcmarklist,lastmark):
+    limitstore = 20
+    numberstoremark = float(len(mcmarklist))
+    mcmarklist.append(lastmark)
+    
+    
+    if numberstoremark<limitstore:
+        return temp, mcmarklist
+    else:    
+        mcmarklist.pop(0)
+        numberdesc = mcmarklist.count(' @DESC\n')
+        numberprob = mcmarklist.count(' @PROB\n')
+        print "%s %f"%("prob",(float(numberprob + numberdesc)/numberstoremark))
+        if numberprob/numberstoremark > 0.4:
+            return temp * 0.95, mcmarklist
+        elif (numberprob + numberdesc)/numberstoremark < 0.2:
+            return temp * 1.05, mcmarklist
+        else:
+            return temp, mcmarklist
+        
+     
 
 
 
