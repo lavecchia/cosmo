@@ -69,11 +69,13 @@ class GeneticAlgorithm(object):
     memberlst -- list of member object
     """
     def __init__(self, memberlst):
-        self.MAXRULETTEWHEELCYCLES = 100
-        self.ALTERCONST = 0.5
+        self.MAXRULETTEWHEELCYCLES = 400
+        self.ALTERCONST = 0.1
         self.memberlst = memberlst
-        self.MUTPERCENT = 5.0
-        
+        self.MUTPERCENT = 0.05
+        self.NEIGHBORPERCENT = 0.05
+        self.MAXTOURNAMENTCYCLES = 400
+        self.TOURNAMENTWEAKWINPROB = 0.05
     
     def check_limits(self,val,minval,maxval):
         """Common function to check if value is between limits.
@@ -113,9 +115,26 @@ class GeneticAlgorithm(object):
 
         (only is implemented roulette wheel selector)
         """
-        return self.selection_roulettewheel()
+        #~ return self.selection_roulettewheel()
+        return self.selection_half()
     
-     
+    
+    def selection_half(self):
+        """Parent selector alternative
+        Implementation of half selector.
+        Take the best half of members
+        Output:
+        Return selected parent
+        """
+        
+        memberlist = sorted(self.memberlst, key=lambda x: x.fitness, reverse=True)
+        parentlst = []
+        
+        for nmember in range(len(memberlist)/2):
+            parentlst.append(memberlist[nmember])
+        return parentlst
+        
+        
     def selection_roulettewheel(self):
         """Implementation of Roulette Wheel selector.
         
@@ -124,11 +143,15 @@ class GeneticAlgorithm(object):
         """
         sumfitness =  sum(member.fitness for member in self.memberlst)
         parentlst = []
+        memberlst = sorted(self.memberlst, key=lambda x: x.fitness, reverse=True)
+        
+        #the best solution at the moment is add automatically
+        parentlst.append(memberlst[0])
         cycles = 0
         while len(parentlst)< (len(self.memberlst)/2):
             pick = random.uniform(0, sumfitness)
             current = 0
-            for member in self.memberlst:
+            for member in memberlst:
                 current += member.fitness
                 if (current > pick) and (member not in parentlst) and len(parentlst)< (len(self.memberlst)/2):
                     parentlst.append(member)
@@ -138,7 +161,37 @@ class GeneticAlgorithm(object):
             cycles += 1
         return parentlst
         
+        
+    def selection_tournament(self):
+        """Parent selector alternative
+        Implementation of tournament selector.
+        
+        Output:
+        Return selected parent
+        """
+        parentlst = []
+        memberlist = sorted(self.memberlst, key=lambda x: x.fitness, reverse=True)
+        #the best solution at the moment is add automatically
+        parentlst.append(memberlst[0])
+        
+        while len(parentlst)<(len(self.memberlst)/2):
+            #select parent
+            parent1 = random.choice(memberlst)
+            parent2 = random.choice(memberlst)
+            if (random.random < self.TOURNAMENTWEAKWINPROB) or (parent1.fitness >= parent2.fitness):
+                if parent1 not in parenlst:
+                    parentlst.append(parent1)
+            else:
+                if parent2 not in parentlst:
+                    parentlst.append(parent2)
 
+            if cycles > self.MAXTOURNAMENTCYCLES:
+                print "Warning! Cycles superate MAXTOURNAMENTCYCLES"
+                return parentlst
+            cycles += 1
+        return parentlst
+        
+        
     def build_randomchildren(self, parentlst):
         """Return number of children object same as half of parents.
         
@@ -151,15 +204,23 @@ class GeneticAlgorithm(object):
         childrenlst=[]
         #copy chromosome list
         for nchild in range(len(parentlst)):
-            #select and delete the parent 1
-            parent1 = random.choice(parentlst)
-            #~ parent1 = parentlst[random.randint(0,len(parentlst)-1)]
-            #~ #select and delete the parent 2
-            parent2 = random.choice(parentlst)
-            #~ parent2 = cpmemberlst.pop(random.randint(0,len(cpmemberlst)-1))
-            #~ parent2 = parentlst[random.randint(0,len(parentlst)-1)]
-            childrenlst.append(self.crossover_chromosome(parent1.chromosome,
-                parent2.chromosome))
+            #build a child near a parent (neighbor child)
+            if random.random() < self.NEIGHBORPERCENT:
+                #select the parent
+                parent = random.choice(parentlst)
+                childrenlst.append(self.neighbor_chromosome(parent.chromosome))
+
+            #build a child from crossover its parent chromosomes
+            else:
+                #select the parent 1
+                parent1 = random.choice(parentlst)
+                #~ parent1 = parentlst[random.randint(0,len(parentlst)-1)]
+                #~ #select the parent 2
+                parent2 = random.choice(parentlst)
+                #~ parent2 = cpmemberlst.pop(random.randint(0,len(cpmemberlst)-1))
+                #~ parent2 = parentlst[random.randint(0,len(parentlst)-1)]
+                childrenlst.append(self.crossover_chromosome(parent1.chromosome,
+                    parent2.chromosome))
         return childrenlst
     
     
@@ -255,6 +316,7 @@ class GeneticAlgorithm(object):
         rndselector = random.random()
         # gaussian center in 0 x ALTERCONST
         rndalter = random.gauss(0,0.3) * self.ALTERCONST
+
         if rndselector < 0.5:
             newval = self.check_limits(floatgene1.val + floatgene1.val * rndalter,floatgene1.minval,floatgene1.maxval)
             return Gene(newval,floatgene1.minval,floatgene1.maxval)
@@ -266,6 +328,7 @@ class GeneticAlgorithm(object):
             newval = self.check_limits(val,minval,maxval)
             return Gene(newval,floatgene2.minval,floatgene2.maxval)
            
+
             
     """
     MUTATION FUNCTIONS
@@ -274,9 +337,8 @@ class GeneticAlgorithm(object):
     def mutation_gene(self,gene):
         """Mutation of a gene, that depends of type of its value.
         """
-        # implemented for float gene only
         # do mutation on val
-        rnd = random.random() * 100.0
+        rnd = random.random() 
         if rnd > self.MUTPERCENT:
             return gene
         else:
@@ -317,7 +379,88 @@ class GeneticAlgorithm(object):
         maxval = floatgene.maxval
         mutval = random.uniform(minval,maxval)
         return mutval
+        
+    
+    """
+    NEIGHBOR FUNCTIONS
+    """
+    
+    def neighbor_chromosome(self, chromosome):
+        """Buid a neighbor chromosome from a parent chromosome.
+        Modified a little the input chromosome
+        
+        Keywords arguments:
+        chromosome -- list of gene objects
+        
+        Output:
+        List of new gene objects
+        """
+        childgenlst = []
+        for igen in range(0,len(chromosome)):
+            neighborgen = self.neighbor_gene(chromosome[igen])
+            childgenlst.append(neighborgen)
+            
+        return Member(childgenlst)
+        
+        
+    def neighbor_gene(self,gene):
+        """Build a neighbor gene, redirect depend of type of gene.
+        
+        Keyword arguments:
+        gene -- gene object
 
+        Output:
+        new gene object
+        """
+ 
+        if isinstance(gene.val,float):
+            return self.neighbor_floatgene(gene)
+        elif isinstance(gene.val,list):
+            return self.crossover_lstgene(gene)
+        else:
+            # print gene.val
+            print "ERROR: Type of gene is not defined"
+            exit()
+ 
+
+    def neighbor_floatgene(self,floatgene):
+        """The value of float gene is modified a little.
+        
+        Keyword arguments:
+        floatgene -- gene object with float as value
+        
+        Output:
+        New gene
+        """
+        rndselector = random.random()
+        # gaussian center in 0 x ALTERCONST
+        rndalter = random.gauss(0,0.3) * self.ALTERCONST
+
+        newval = self.check_limits(floatgene.val + floatgene.val * rndalter,floatgene.minval,floatgene.maxval)
+        return Gene(newval,floatgene.minval,floatgene.maxval)
+ 
+  
+    def neighbor_lstgene(self,lstgene):
+        """The value of lstgene is modified a little.
+        
+        Keyword arguments:
+        lstgene -- gene object with list as value
+        
+        Output:
+        New gene
+        """
+        rndselector = random.random()
+        # gaussian center in 0 x ALTERCONST
+        rndalter = random.gauss(0,0.3) * self.ALTERCONST
+        newgenelst = []
+        valuelst = []
+        for i in range(len(lstgene.val)):
+            value = lstgene.val[i]
+            newval = self.check_limits(value + value * rndalter, minval, maxval)
+            valuelst.append(newval)
+        return Gene(valuelst, lstgene.minval, lstgene.maxval)
+              
+                
         
 class Member(object):
     """Member is an individue.

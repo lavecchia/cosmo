@@ -19,6 +19,7 @@ import time #check time of calculation
 import datetime
 import shutil
 import math
+import ga_interface
 
 
 ###########
@@ -155,6 +156,21 @@ if cfg.has_option("system", "calculationtype"):
 else:  
     calculationtype="mc"
 varlist.append("calculationtype")
+
+
+# genetic algorithm parameters
+if cfg.has_option("system", "numbermembers"):
+    numbermembers = int(cfg.get("system", "numbermembers"))
+else:
+    numbermembers = 20
+varlist.append("numbermembers")
+    
+if cfg.has_option("system", "maxgen"):
+    maxgen = int(cfg.get("system", "maxgen"))
+else:
+    maxgen = 100
+varlist.append("maxgen")
+
 
 
 if cfg.has_option("system", "onlyneutral"):  
@@ -324,6 +340,8 @@ outfile.write(20*"=" + "\n")
 
 if cyclicoptimization == True:
     period = 0
+    maxcyclebystep = stepslist[period][1] # number of cycle by step #add to fix GA
+    freeparamlist = stepslist[period][0] #add to fix GA
 else:
     freeparamlist=[]
     for value,key in param0dic.iteritems():
@@ -444,11 +462,139 @@ if calculationtype == 'mc':
             print temperature 
             print mcmarklist
             
+            print "PASO:" + str(ncycle)
             acumcycle += 1
             
+#Genetic Algorithm run
+elif calculationtype == 'ga':
+    acumcycle = 0 # accumulate the number of cycles
+    
+    memberlist = [] #list that store members (list of paramtestdic)
+    #building parents
+    for n in range(0,numbermembers):
 
+                        
+        #check restrictions, if not assign parameters again
+        tag1sttry = True # the first time into while loop
+        while (check_restrictions(paramtestdic,fixlimitdic)==0) or (tag1sttry == True):
+            tag1sttry = False # first time into while loop
+            # generate new values of parameters with a distribution probability from current values
+            paramtestdic = modified_values(currentstep[1], freeparamlist, rangesdic)
             
+            # multiplied initial radii with a constant k, which is optimizing.
+            try:
+                if paramtestdic["k@"]:
+                    for key, value in paramtestdic.iteritems():
+                        if "rc@" in key:
+                            paramtestdic[key] = param0dic[key] * paramtestdic["k@"] 
+            except:
+                pass
             
+            #fix values
+            try:
+                for key in fixlist:
+                    paramtestdic[key]=param0dic[key]
+            except:
+                pass
+                
+        memberlist.append(ga_interface.memberobj(paramtestdic))
+
+
+     
+    #generations
+    for ncycle in range(1,maxgen):
+        
+        if cyclicoptimization == True:
+            maxcyclebystep = stepslist[period][1] # number of cycle by step
+            freeparamlist = stepslist[period][0]
+            if acumcycle >= maxcyclebystep:
+                acumcycle = 0 # reset count
+                if period == len(stepslist)-1:
+                    period = 0 #restart to first step
+                else:
+                    period += 1 #next step
+                paramtestdic = beststep[1]
+                datadic = beststep[2]
+                print period
+        
+        
+        #number of step, to generate name of files
+        numberstep = next(step)
+        
+        #fitness calculation
+        fitnesslist = [] #store fitness
+        for member in memberlist:
+            paramtestdic = member.paramdic
+            rsolvtest = paramtestdic["rsolv@"] #take rsolv parameter 
+            if nptype=="claverie" or nptype=="claverietype":    
+                yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+            else:
+                yrel = 0
+
+            #=================================================================================================
+            # check if the new value of error function is below respect to the best value store in beststep[0]
+
+            if member.fitness == None:
+                totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error(numberstep, paramtestdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
+            
+                if totalerror < mintotalerror:
+                    mintotalerror = totalerror
+                    # write summary file with the low totalerror step
+                    print_summary(mintotalerror, mae, rmse, bias, r2, slope, intercept, ncycle,datadic,nptype)
+            
+                    # write parameter values
+                    paramout = open("list_param.out","w")
+                    for key, value in sorted(paramtestdic.iteritems()):
+                        paramout.write("%-3s \t %.3f\n" % (key,value))
+                    paramout.close()
+                                
+                    # ====================================================================
+                    
+                #~ else:    
+                    #~ shutil.rmtree(numberstep)
+                shutil.rmtree(numberstep) # erase current directory
+                fitness = 1.0/(totalerror*totalerror*totalerror*totalerror)
+                fitnesslist.append(fitness)
+                member.set_fitness(fitness)
+            else:
+                fitnesslist.append(member.fitness)
+        
+        
+
+        
+        genetic = ga_interface.SetsGeneration(memberlist, minlimitdic, maxlimitdic)
+        memberlist = genetic.next()
+  
+        outfile.write("\n") #end of line with a mark
+
+        acumcycle += 1
+        print "PASO: %i %.3f"%(ncycle,np.mean(fitnesslist))
+        salida = ""
+        for fitn in sorted(fitnesslist):
+            salida += " %.3f"%(fitn)
+        print salida
+
+# Minimize Algorithm run
+elif calculationtype == 'minimize':
+    from lmfit import minimize, Parameters
+    
+    def residual(params, x, data, eps_data):
+        amp = params['amp'].value
+        pshift = params['phase'].value
+        freq = params['frequency'].value
+        decay = params['decay'].value
+
+        model = amp * sin(x * freq  + pshift) * exp(-x*x*decay)
+
+        return (data-model)/eps_data
+
+    params = Parameters()
+    params.add('amp', value=10)
+    params.add('decay', value=0.007)
+    params.add('phase', value=0.2)
+    params.add('frequency', value=3.0)
+
+    out = minimize(residual, params, args=(x, data, eps_data))
 
 #print best cycle
 outfile.write("BEST CYCLE:\n")

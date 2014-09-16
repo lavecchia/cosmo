@@ -353,8 +353,8 @@ def np_calc(cosmoparamlist,paramdic,nptype,yrel,electronlist=None):
                     print "There is not radius defined (r@ or rc@) for " + symbolmod + ". Please check it"
                     exit()
             
-            #~ #~dispterm += gamma*cosmoarea
-            #~ dispterm += gamma*cosmoarea*(rsolv+radii)*(rsolv+radii)/(radii*radii) #change to scale SES area to SAS: (r+Rsolv)^2/r^2
+            #~ dispterm += gamma*cosmoarea
+            dispterm += gamma*cosmoarea*(rsolv+radii)*(rsolv+radii)/(radii*radii) #change to scale SES area to SAS: (r+Rsolv)^2/r^2
             
             #~ cavitationterm += calc_pierotti(rsolv,radii,yrel)*cosmoarea/((radii+rsolv)*(radii+rsolv)*PI*4/3) # sum of Claverie terms
             cavitationterm += calc_pierotti(rsolv,radii,yrel)*cosmoarea/((radii)*(radii)*PI*4/3) # sum of Claverie terms
@@ -476,12 +476,11 @@ def calc_error(numberstep, paramdic, datadic, extrakeys, extrakeyssolv, outfile,
     slope, intercept, r2 = fit_lineal(xdata,ydata) #linear fit
 
     
-    totalerror = rmse #var to optimize
+    totalerror = mae #var to optimize
     prevline = "%-5s Err: %3.4f MAE: %3.4f RMSE: %3.4f BIAS: %3.4f R2: %1.5f " % (numberstep, totalerror, mae, rmse, bias, r2)
     outfile.write(prevline + print_param(paramdic))
      
-    print "PASO:" + numberstep
- 
+     
     return totalerror, mae, rmse, bias, r2, slope, intercept, datadic
 
 
@@ -496,33 +495,33 @@ def calc_error(numberstep, paramdic, datadic, extrakeys, extrakeyssolv, outfile,
 #  @rtype  binary
 def check_restrictions(paramdic, fixlimitdic):
     checker=0
-    #~ #check radii F < Cl < Br < I
-    #~ if (paramdic["r@F.a"]<paramdic["r@Cl.a"]) and (paramdic["r@Cl.a"]<paramdic["r@Br.a"]) and (paramdic["r@Br.a"]<paramdic["r@I.a"]):
-        #~ checker = 1
-    #~ else:
-        #~#print "fail order between F < Cl < Br < I"
-        #~ return 0
-    #~ 
-    #~ #check radii O < S 
-    #~ if paramdic["r@O.a"] < paramdic["r@S.a"]:
-        #~ checker = 1
-    #~ else:
-        #print "fail order between O < S"
-        #~ return 0
-    #~ 
-    #~ #check radii N < P
-    #~ if paramdic["r@N.a"] < paramdic["r@P.a"]:
-        #~ checker = 1
-    #~ else:
-        #~#print "fail order between N < P"
-        #~ return 0
-      #~ 
-    #~ #check radii of second period C > N > O > F 
-    #~ if (paramdic["r@C.a"]>paramdic["r@N.a"]) and (paramdic["r@N.a"]>paramdic["r@O.a"]) and (paramdic["r@O.a"]>paramdic["r@F.a"]):
-        #~ checker = 1
-    #~ else:
-        #~#print "fail order between first row"
-        #~ return 0
+    #check radii F < Cl < Br < I
+    if (paramdic["rc@F.a"]<=paramdic["rc@Cl.a"]) and (paramdic["rc@Cl.a"]<=paramdic["rc@Br.a"]) and (paramdic["rc@Br.a"]<=paramdic["rc@I.a"]):
+        checker = 1
+    else:
+        #~ #~#print "fail order between F < Cl < Br < I"
+        return 0
+    
+    #check radii O <= S 
+    if paramdic["rc@O.a"] < paramdic["rc@S.a"]:
+        checker = 1
+    else:
+        #~ #print "fail order between O < S"
+        return 0
+    
+    #check radii N < P
+    if paramdic["rc@N.a"] <= paramdic["rc@P.a"]:
+        checker = 1
+    else:
+        #~ #~#print "fail order between N < P"
+        return 0
+      
+    #check radii of second period C > N > O > F 
+    if (paramdic["rc@C.a"]>=paramdic["rc@N.a"]) and (paramdic["rc@N.a"]>=paramdic["rc@O.a"]) and (paramdic["rc@O.a"]>=paramdic["rc@F.a"]):
+        checker = 1
+    else:
+        #~ #~#print "fail order between first row"
+        return 0
         
     for key, value in paramdic.iteritems():
         if fixlimitdic[key][0] <= value <= fixlimitdic[key][1]:
@@ -621,7 +620,6 @@ def temperature_control(temp,mcmarklist,lastmark):
     limitstore = 20
     numberstoremark = float(len(mcmarklist))
     mcmarklist.append(lastmark)
-    
     
     if numberstoremark<limitstore:
         return temp, mcmarklist
