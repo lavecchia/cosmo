@@ -194,7 +194,7 @@ def radii_to_text(paramdic):
 def print_param(paramdic):
     line=""
     for key, value in sorted(paramdic.iteritems()):
-        line += " %-2s % .4f " % (key,value)
+        line += " %-2s % .5f " % (key,value)
     line = line.strip()
     return line
     

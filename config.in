@@ -1,0 +1,52 @@
+[limits]
+#fix maximum displacement from initial values
+radiilimit = 0.4 
+#range of radii
+raddirange = 0.2 
+#fix maximum displacement from initial values of cosmo radii. only for internal calculation of MOPAC
+cosmoradiilimit = 0.3
+#range of cosmo radii
+cosmoradiirange = 0.05
+#fix maximum displacement from initial values
+gammalimit = 0.4
+#range of gamma
+gammarange = 0.05 
+#fix maximum displacement from initial values
+rsolvlimit = 0.2
+#range of solvent radii
+rsolvrange = 0.05
+eumbrallimit = 0.1
+eumbralrange = 0.05
+
+[method]
+extrakeys = RM1 PRECISE 1SCF 
+extrakeyssolv = EPS=78.4 COSWRT
+templateext = _rm1.mop
+
+
+[system]
+#type of calculation: mc = Monte Carlo, ga = Genetic Algorithm (not yet implemented)
+calculationtype = mc
+onlyneutral=True
+#sequence of radii and gamma optimization
+cyclicoptimization = True 
+#maximum number of iterations in the minimization
+maxiter = 30000 
+excludeatomlist = I Cl Br F S N O P
+nptype = gammasasa
+#temperature of Monte Carlo simulation
+temperature = 0.01
+#velocity of decrement of range that take values
+rangeslope = 0.995 
+
+
+step1 = g@H.a g@C.a 300
+step2 = rc@H.a rc@C.a 300
+#step3 = g@H.a g@C.a g@N.a g@O.a g@F.a g@P.a g@S.a g@Cl.a g@Br.a g@H.b 200
+#step1 = g@H.a g@H.b 100
+step4 = rsolv@ 50
+step3 = rc@H.a rc@C.a g@H.a g@C.a 400
+
+#step2 = r@H.a r@C.a rc@H rc@C 100
+#step3 = rsolv@ 10
+#fixlist=["e@H","e@S","e@N","e@O"]

@@ -576,25 +576,115 @@ elif calculationtype == 'ga':
 
 # Minimize Algorithm run
 elif calculationtype == 'minimize':
-    from lmfit import minimize, Parameters
+    from lmfit import minimize, Parameters, Parameter, report_fit
     
-    def residual(params, x, data, eps_data):
-        amp = params['amp'].value
-        pshift = params['phase'].value
-        freq = params['frequency'].value
-        decay = params['decay'].value
+    acumcycle = 0
+    
+    def fcn2min(params, extrakeys,  extrakeyssolv, rsolvtest, outfile, nptype, datacompoundnamelist):
+        global mintotalerror
+        global acumcycle
+        global datadic
+        
+        if nptype=="claverie" or nptype=="claverietype":    
+            yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+        else:
+            yrel = 0
+        
 
-        model = amp * sin(x * freq  + pshift) * exp(-x*x*decay)
+        
+        #rebuild paramdic
+        paramdic={}
+        for key, values in params.iteritems():
+            key = key.replace("zzz","@") #change to original key formats
+            key = key.replace("xxx",".")
+            paramdic[key]=values.value
+    
+        
+        totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000", paramdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
 
-        return (data-model)/eps_data
+        
+        
+        if totalerror < mintotalerror:
+            mintotalerror = totalerror
+            # write summary file with the low totalerror step
+            print_summary(mintotalerror, mae, rmse, bias, r2, slope, intercept, acumcycle,datadic,nptype)
+    
+            # write parameter values
+            paramout = open("list_param.out","w")
+            for key, value in sorted(paramdic.iteritems()):
+                print "%-3s \t %.5f\n" % (key,value)
+                paramout.write("%-3s \t %.5f\n" % (key,value))
+            paramout.close()
+                        
+            # ====================================================================
+            
+        #~ else:    
+            #~ shutil.rmtree(numberstep)
+        shutil.rmtree("0000") # erase current directory
 
+        print "PASO %i: %f"%(acumcycle,totalerror)
+        
+        acumcycle += 1
+        
+        
+        errors = []
+        for i in range(0,len(datacompoundnamelist)):
+            errors.append(datadic[datacompoundnamelist[i]]['dgexp']-datadic[datacompoundnamelist[i]]['dgcalc'])
+        #~ return errors
+        return totalerror
+        
     params = Parameters()
-    params.add('amp', value=10)
-    params.add('decay', value=0.007)
-    params.add('phase', value=0.2)
-    params.add('frequency', value=3.0)
 
-    out = minimize(residual, params, args=(x, data, eps_data))
+    for ikey, ivalue in param0dic.iteritems():
+        maxlimit = maxlimitdic[ikey]
+        minlimit = minlimitdic[ikey]
+        ikey = ikey.replace("@","zzz") #replace @ with zzz because this character is not supported by lmfit library
+        ikey = ikey.replace(".","xxx") #replace . with xxx because this character is not supported by lmfit library
+        #~ params.add(ikey, value=ivalue) 
+        #~ if "gzzz" in ikey:
+            #~ params.add(ikey, value=ivalue, min=minlimit, max=maxlimit) 
+        #~ else:
+            #~ params.add(ikey, ivalue, False) 
+
+        params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
+    
+
+    print params
+    
+    #experimental data
+    datacompoundnamelist = []
+    for ikey, ivalue in datadic.iteritems():
+        datacompoundnamelist.append(ikey) #to convert in error function to a dictionary
+
+    #~ extra_kwargs={}
+    #~ extra_kwargs['epsfcn'] = 0.5
+    #~ result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, rsolvtest, outfile, nptype, datacompoundnamelist), method='nelder', **extra_kwargs)
+
+
+    #~ extra_kwargs={}
+    #~ extra_kwargs['T'] = 300.0
+    #~ extra_kwargs['stepsize']=0.1
+    #~ result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, rsolvtest, outfile, nptype, datacompoundnamelist), method='basinhopping', **extra_kwargs)
+
+    
+    result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, rsolvtest, outfile, nptype, datacompoundnamelist), method='nelder')
+    
+    
+    #~ #calculate final result
+    #~ final = data + result.residual
+    
+    # write error report
+    report_fit(params)
+
+    #~ # try to plot results
+    #~ try:
+        #~ import pylab
+        #~ pylab.plot(x, data, 'k+')
+        #~ pylab.plot(x, final, 'r')
+        #~ pylab.show()
+    #~ except:
+        #~ pass
+
 
 #print best cycle
 outfile.write("BEST CYCLE:\n")
