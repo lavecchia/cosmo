@@ -54,6 +54,8 @@ def parameters_read(namefile):
 
 #read output of MOPAC
 def mopacout_read(namefile):
+    
+    
     # open file
     mopacfile = open(namefile,"r")
     heatformation = None
@@ -68,11 +70,27 @@ def mopacout_read(namefile):
             cosmoarea = float(linediv[3])
     mopacfile.close()
     if heatformation:
-        pass
+        return heatformation,cosmoarea
     else:
+        # try again,open file (horrible esto)
+        sleep(1.0)
+        mopacfile = open(namefile,"r")
+        heatformation = None
+        for line in mopacfile:
+            if KEYFHOF in line:
+                linediv = line.split()
+                #extract FINAL HEAT OF FORMATION in KCAL/MOL
+                heatformation = float(linediv[5])
+            elif KEYCA in line:
+                linediv = line.split()
+                #extract COSMO AREA in SQUARE ANGSTROMS
+                cosmoarea = float(linediv[3])
+        mopacfile.close()
+        if heatformation:
+            return heatformation,cosmoarea
         print "ERROR: A mistake produced to try read the file " + namefile
         exit()
-    return heatformation,cosmoarea
+    
     
     
 #read COS (cosmo information) files of MOPAC
@@ -306,7 +324,8 @@ def exec_commands(cmds, cores = DEFCORE):
         if not processes and not cmds:
             break
         else:
-            time.sleep(0.00001)
+            pass
+            #~ time.sleep(1E-13)
             
 
 
@@ -460,7 +479,10 @@ def calc_error(numberstep, paramdic, datadic, extrakeys, extrakeyssolv, outfile,
         gasindex += 1
         
         # \delta G_calc = Hf_cosmo - Hf_gas + no-polar_term
-        dgcalc = hofcosmo - hofgas + npterm
+        dgcalc = hofcosmo - hofgas + npterm 
+        #~ 
+        #~ dgcalc = npterm #reemplazado para optimizar solo parte no polar
+        #~ dgcalc = hofcosmo - hofgas #reemplazado para optimizar solo la parte electrostatica
         
         datadic[key]["dgcalc"]= dgcalc
         xdata.append(datadic[key]["dgexp"]) #experimental data as x-axis
