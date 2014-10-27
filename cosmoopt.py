@@ -20,6 +20,8 @@ import datetime
 import shutil
 import math
 import ga_interface
+from copy import deepcopy #to deepcopy dictionaries
+#~ import minimize_interface
 
 
 ###########
@@ -360,9 +362,7 @@ mintotalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000
 outfile.write("\n")
 # write summary file with initial values for first step
 print_summary(mintotalerror, mae, rmse, bias, r2, slope, intercept,0,datadic,nptype)
-
 paramtestdic = param0dic #copy initial parameter values to a new dictonary (test) to modified
-
 beststep = [mintotalerror, paramtestdic, datadic] # first element: minimum error, second element: list of values of best step
 currentstep = [mintotalerror, paramtestdic, datadic] # first element: minimum error, second element: list of values of current step
 
@@ -579,23 +579,18 @@ elif calculationtype == 'ga':
 
 # Minimize Algorithm run
 elif calculationtype == 'minimize':
-    from lmfit import minimize, Parameters, Parameter, report_fit
-    
+    from lmfit import minimize, Parameters, Parameter, report_fit, Minimizer
     acumcycle = 0
-    limitcycle = 25
+    limitcycle = 2
     cycleswithoutdown = 0
-    def fcn2min(params, extrakeys,  extrakeyssolv, rsolvtest, outfile, nptype, datacompoundnamelist):
+
+    
+    def fcn2min(params, extrakeys, extrakeyssolv, outfile, nptype, datacompoundnamelist):
         global mintotalerror
         global acumcycle
         global datadic
         global cycleswithoutdown
         global limitcycle
-        
-        
-        if nptype=="claverie" or nptype=="claverietype":    
-            yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
-        else:
-            yrel = 0
 
         #rebuild paramdic
         paramdic={}
@@ -603,94 +598,276 @@ elif calculationtype == 'minimize':
             key = key.replace("zzz","@") #change to original key formats
             key = key.replace("xxx",".")
             paramdic[key]=values.value
-
-        totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000", paramdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
         
+        rsolvtest = paramdic["rsolv@"]
+                
+        if nptype=="claverie" or nptype=="claverietype":
+            yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+        else:
+            yrel = 0
+            
+        totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000", paramdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
         if totalerror < mintotalerror:
             cycleswithoutdown = 0
             mintotalerror = totalerror
             # write summary file with the low totalerror step
             print_summary(mintotalerror, mae, rmse, bias, r2, slope, intercept, acumcycle,datadic,nptype)
-    
             # write parameter values
             paramout = open("list_param.out","w")
             for key, value in sorted(paramdic.iteritems()):
                 print "%-3s \t %.5f\n" % (key,value)
                 paramout.write("%-3s \t %.5f\n" % (key,value))
             paramout.close()
-        
-            # ====================================================================
-            
-        else:    
+        else:
             cycleswithoutdown += 1
-            #~ if cycleswithoutdown > limitcycle:
-                #~ exit()
+            if cycleswithoutdown > limitcycle:
+                return #exit function with error
             #~ shutil.rmtree(numberstep)
         shutil.rmtree("0000") # erase current directory
-
         print "PASO %i: %f"%(acumcycle,totalerror)
-        
         acumcycle += 1
-        
         errors = []
         for i in range(0,len(datacompoundnamelist)):
             errors.append(datadic[datacompoundnamelist[i]]['dgexp']-datadic[datacompoundnamelist[i]]['dgcalc'])
         #~ return errors
+        
         return totalerror
         
     params = Parameters()
-
     for ikey, ivalue in param0dic.iteritems():
         maxlimit = maxlimitdic[ikey]
         minlimit = minlimitdic[ikey]
         ikey = ikey.replace("@","zzz") #replace @ with zzz because this character is not supported by lmfit library
         ikey = ikey.replace(".","xxx") #replace . with xxx because this character is not supported by lmfit library
-        #~ params.add(ikey, value=ivalue) 
+        #~ params.add(ikey, value=ivalue)
         #~ if "rczzz" in ikey:
-            #~ params.add(ikey, value=ivalue, min=minlimit, max=maxlimit) 
+        #~ params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
         #~ else:
-            #~ params.add(ikey, ivalue, False) 
-
+        #~ params.add(ikey, ivalue, False)
         params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
-    
-
+        
     print params
-    
     #experimental data
     datacompoundnamelist = []
     for ikey, ivalue in datadic.iteritems():
         datacompoundnamelist.append(ikey) #to convert in error function to a dictionary
-
+    
     #~ extra_kwargs={}
     #~ extra_kwargs['epsfcn'] = 0.5
     #~ result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, rsolvtest, outfile, nptype, datacompoundnamelist), method='lbfgs', **extra_kwargs)
-
-
     #~ extra_kwargs={}
     #~ extra_kwargs['T'] = 300.0
     #~ extra_kwargs['stepsize']=0.1
     #~ result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, rsolvtest, outfile, nptype, datacompoundnamelist), method='basinhopping', **extra_kwargs)
- 
+    
+    options = {}
+    options["maxiter"] = 3
+    
+    kws = {}
+    kws["options"]=options
+    print kws
+    
+    #~ myfit = Minimizer(fcn2min, params, fcn_args=(extrakeys, extrakeyssolv, outfile, nptype, datacompoundnamelist), maxfun=5, **options)
+    #~ myfit.prepare_fit()
+    #~ init = my_residual(p_fit, x)
+    #~ pylab.plot(x, init, 'b--')
 
-    result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, rsolvtest, outfile, nptype, datacompoundnamelist), method='powell')
+    #~ myfit.fmin()
     
     
+    try:
+        result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, outfile, nptype, datacompoundnamelist), method='powell')
+    except:
+        pass
+    #~ result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, outfile, nptype, datacompoundnamelist), method='powell', **kws)
     #~ #calculate final result
     #~ final = data + result.residual
-    
     # write error report
     report_fit(params)
-
     #~ # try to plot results
     #~ try:
-        #~ import pylab
-        #~ pylab.plot(x, data, 'k+')
-        #~ pylab.plot(x, final, 'r')
-        #~ pylab.show()
+    #~ import pylab
+    #~ pylab.plot(x, data, 'k+')
+    #~ pylab.plot(x, final, 'r')
+    #~ pylab.show()
     #~ except:
-        #~ pass
+    #~ pass
 
+# genetic algorithm + minimization run
+elif calculationtype == 'gamin': 
+    from lmfit import minimize, Parameters, Parameter, report_fit
+    maxcycleminimization = 15 #set minimization period
+    maxcyclega = 15 #set genetic algorithm period
 
+    
+    #function to minimize
+    def fcn2min(params, extrakeys, extrakeyssolv, outfile, nptype, datacompoundnamelist):
+        global mintotalerror #the most minimal error
+        global acumcycle #general count of cycles
+        global datadic #store experimental, calculated and contributions to solvation energies for all compounds
+        global paramtestdic # params to test
+        global cyclemin # cycle number of the period of minimization
+        global mintotalerrormember # minimal error of a member
+        global minparamtestdic #store params with mintotalerrormemeber
+        #rebuild paramtestdic
+        paramtestdic={}
+        for key, values in params.iteritems():
+            key = key.replace("zzz","@") #change to original key formats
+            key = key.replace("xxx",".")
+            paramtestdic[key]=values.value
+        rsolvtest = paramtestdic["rsolv@"]
+        if nptype=="claverie" or nptype=="claverietype":
+            yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+        else:
+            yrel = 0
+        totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000", paramtestdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
+        if totalerror < mintotalerror:
+            mintotalerror = totalerror
+            # write summary file with the low totalerror step
+            print_summary(mintotalerror, mae, rmse, bias, r2, slope, intercept, acumcycle,datadic,nptype)
+            # write parameter values
+            paramout = open("list_param.out","w")
+            for key, value in sorted(paramtestdic.iteritems()):
+                paramout.write("%-3s \t %.5f\n" % (key,value))
+            paramout.close()
+        
+        if totalerror < mintotalerrormember:
+            minparamtestdic = deepcopy(paramtestdic)
+        shutil.rmtree("0000") # erase current directory
+        print "PASO %i: %f"%(cyclemin,totalerror)        
+        
+        if cyclemin >= maxcycleminimization:
+            return
+        cyclemin += 1
+        return totalerror
+        
+    
+    memberlist = [] #list that store members (list of paramtestdic)
+    #building parents
+    for n in range(0,numbermembers):
+        #check restrictions, if not assign parameters again
+        tag1sttry = True # the first time into while loop
+        while (check_restrictions(paramtestdic,fixlimitdic)==0) or (tag1sttry == True):
+            tag1sttry = False # first time into while loop
+            # generate new values of parameters with a distribution probability from current values
+            paramtestdic = modified_values(currentstep[1], freeparamlist, rangesdic)
+            
+            # multiplied initial radii with a constant k, which is optimizing.
+            try:
+                if paramtestdic["k@"]:
+                    for key, value in paramtestdic.iteritems():
+                        if "rc@" in key:
+                            paramtestdic[key] = param0dic[key] * paramtestdic["k@"] 
+            except:
+                pass
+            
+            #fix values
+            try:
+                for key in fixlist:
+                    paramtestdic[key]=param0dic[key]
+            except:
+                pass
+                
+        memberlist.append(ga_interface.memberobj(paramtestdic))
+
+    acumcycle = 0 # accumulate the number of cycles
+    cyclega = 0 # accumulate the number of cycles of GA period
+    
+    #generations
+    for ncycle in range(1,maxgen):
+        
+        #number of step, to generate name of files
+        numberstep = next(step)
+        
+        #fitness calculation
+        fitnesslist = [] #store fitness
+        for member in memberlist:
+            paramtestdic = deepcopy(member.paramdic)
+            minparamtestdic = deepcopy(member.paramdic)
+            rsolvtest = paramtestdic["rsolv@"] #take rsolv parameter 
+            if nptype=="claverie" or nptype=="claverietype":    
+                yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+            else:
+                yrel = 0
+
+            if cyclega == maxcyclega:
+                # do minimization
+                print "minimization..."
+                cyclemin = 0
+
+                params = Parameters()
+                for ikey, ivalue in paramtestdic.iteritems():
+                    maxlimit = maxlimitdic[ikey]
+                    minlimit = minlimitdic[ikey]
+                    ikey = ikey.replace("@","zzz") #replace @ with zzz because this character is not supported by lmfit library
+                    ikey = ikey.replace(".","xxx") #replace . with xxx because this character is not supported by lmfit library
+                    #~ params.add(ikey, value=ivalue)
+                    #~ if "rczzz" in ikey:
+                    #~ params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
+                    #~ else:
+                    #~ params.add(ikey, ivalue, False)
+                    params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
+                    
+                #experimental data
+                datacompoundnamelist = []
+                for ikey, ivalue in datadic.iteritems():
+                    datacompoundnamelist.append(ikey) #to convert in error function to a dictionary
+                
+                try:
+                    mintotalerrormember = 1 / (member.fitness * member.fitness * member.fitness * member.fitness)
+                except:
+                    mintotalerrormember = 1000.0
+      
+                try:
+                    result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, outfile, nptype, datacompoundnamelist), method='powell')
+                except:
+                    pass
+                
+               
+                member.paramdic = deepcopy(minparamtestdic)
+                member.fitness = None
+
+            if member.fitness == None:
+                totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error(numberstep, paramtestdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
+            
+                if totalerror < mintotalerror:
+                    mintotalerror = totalerror
+                    # write summary file with the low totalerror step
+                    print_summary(mintotalerror, mae, rmse, bias, r2, slope, intercept, ncycle,datadic,nptype)
+                    
+                    # write parameter values
+                    paramout = open("list_param.out","w")
+                    for key, value in sorted(paramtestdic.iteritems()):
+                        paramout.write("%-3s \t %.3f\n" % (key,value))
+                    paramout.close()
+                                
+                shutil.rmtree(numberstep) # erase current directory
+                fitness = 1.0/(totalerror*totalerror*totalerror*totalerror)
+                fitnesslist.append(fitness)
+                member.set_fitness(fitness)
+            else:
+                fitnesslist.append(member.fitness)
+                #add to fix write all individues in report file
+                prevline = "%-5s Err: %3.4f MAE: %3.4f RMSE: %3.4f BIAS: %3.4f R2: %1.5f " % (numberstep, totalerror, mae, rmse, bias, r2)
+                outfile.write(prevline + print_param(paramtestdic))
+        
+        if cyclega >= maxcyclega:
+            cyclega = 0
+
+        outfile.write("\n")
+        genetic = ga_interface.SetsGeneration(memberlist, minlimitdic, maxlimitdic)
+        memberlist = genetic.next()
+  
+        outfile.write("\n") #end of line with a mark
+        cyclega = cyclega + 1
+        acumcycle += 1
+        print "PASO: %i %.3f"%(ncycle,np.mean(fitnesslist))
+        salida = ""
+        for fitn in sorted(fitnesslist):
+            salida += " %.3f"%(fitn)
+        print salida
+    
+    
 #print best cycle
 outfile.write("BEST CYCLE:\n")
 outfile.write(str(beststep[0])+str(beststep[1])+"\n")

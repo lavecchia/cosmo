@@ -260,8 +260,11 @@ class GeneticAlgorithm(object):
         new gene object
         """
         if type(gene1.val)!=type(gene2.val):
-            print "ERROR: genes with different types"
-            exit()
+            if "float" in (str(type(gene1.val))) and ("float" in str(type(gene2.val))):
+                pass
+            else:
+                print "ERROR: genes with different types"
+                exit()
         if isinstance(gene1.val,float):
             return self.crossover_floatgene(gene1,gene2)
         elif isinstance(gene1.val,list):
