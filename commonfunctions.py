@@ -125,13 +125,27 @@ def electron_read(namefile):
             tag = 0
         elif tag == 1:
             linediv = line.split()
-            electronlist.append(float(linediv[3]))
+            electronlist.append(float(linediv[3])) #electron number
         if "ATOM NO.   TYPE          CHARGE      No. of ELECS.   s-Pop       p-Pop" in line:
             tag = 1
     inputfile.close()
     return electronlist
             
-
+# read .out file and extract number of electron by atoms + atomic number
+def atomtypeelectron_read(namefile):
+    electronlist = []
+    inputfile = open(namefile, "r")
+    tag = 0
+    for line in inputfile:
+        if "DIPOLE" in line:
+            tag = 0
+        elif tag == 1:
+            linediv = line.split()
+            electronlist.append([linediv[1],float(linediv[3])]) #atom type - electron number
+        if "ATOM NO.   TYPE          CHARGE      No. of ELECS.   s-Pop       p-Pop" in line:
+            tag = 1
+    inputfile.close()
+    return electronlist
 
     
 # ===============================================================================================
@@ -506,6 +520,49 @@ def calc_error(numberstep, paramdic, datadic, extrakeys, extrakeyssolv, outfile,
     return totalerror, mae, rmse, bias, r2, slope, intercept, datadic
 
 
+#calculation of metrics by element
+def calc_staticsbyelement(numberstep, datadic, elementsymbol):
+    errorlist = []
+    electronlistbyelementlist =[]
+    xdata = []
+    ydata = []
+    
+    for key, value in datadic.iteritems():
+        cosmoinput =str(numberstep)+"/"+os.path.basename(datadic[key]["template"]).replace(".mop","_" + str(numberstep) + ".mop")
+        
+        #~ hofcosmo, areacosmo = mopacout_read(cosmoinput.replace(".mop",".out")) #read MOPAC output from .out
+        cosmoparamlist = cosmoout_read(cosmoinput.replace(".mop",".cos")) #read cosmo param from .cos
+        atomtypeelectronlist = atomtypeelectron_read(cosmoinput.replace(".mop",".out")) #read atomic symbol - number of electron from MOPAC output 
+        tag = False
+        # atomtypeelectronlist = [[atomsymbol1,electronnumber1], [atomsymbol2,electronnumber2], ...]
+        for atomtypeelectron in atomtypeelectronlist:
+            if elementsymbol in atomtypeelectron[0]:
+                errorlist.append(datadic[key]["error"])
+                electronlistbyelementlist.append(atomtypeelectron[1])
+                
+                if tag == False: # store dgexp vs dgcalc point only once
+                    tag = True
+                    xdata.append(datadic[key]["dgexp"]) #experimental data as x-axis
+                    ydata.append(datadic[key]["dgcalc"]) #calc data as y-axis
+        
+    errorarray = np.array(errorlist)
+    try:
+        mae = np.mean(abs(errorarray))
+        rmse = math.sqrt(np.mean((errorarray)**2))
+        bias = np.mean(errorarray)
+    
+        # calc vs experimental
+        slope, intercept, r2 = fit_lineal(xdata,ydata) #linear fit
+    
+        # error vs electron number
+        errorslope, errorintercept, errorr2 = fit_lineal(electronlistbyelementlist,errorlist) #linear fit
+    except:
+            pass
+    return mae, rmse, bias, r2, slope, intercept, errorr2, errorslope, errorintercept
+
+
+
+
 #
 #  name: check_restrictions
 #  Check if a serie of conditions are True or False
@@ -570,10 +627,10 @@ def check_restrictions(paramdic, fixlimitdic):
 #
 def make_gaussmodification(value0,rangevalue):
     #gauss
-    return value0 + rangevalue * np.random.normal(0,0.2)
+    #~ return value0 + rangevalue * np.random.normal(0,0.2)
     
     #uniform
-    #~ return value0 + rangevalue * np.random.uniform(-1,1)
+    return value0 + rangevalue * np.random.uniform(-1,1)
 
 
 #  

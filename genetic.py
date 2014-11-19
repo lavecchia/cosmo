@@ -149,8 +149,8 @@ class GeneticAlgorithm(object):
         parentlst.append(memberlst[0])
         cycles = 0
         while len(parentlst)< (len(self.memberlst)/2):
-            pick = random.uniform(0, sumfitness)
             current = 0
+            pick = random.uniform(0, sumfitness)
             for member in memberlst:
                 current += member.fitness
                 if (current > pick) and (member not in parentlst) and len(parentlst)< (len(self.memberlst)/2):
@@ -162,6 +162,8 @@ class GeneticAlgorithm(object):
         return parentlst
         
         
+
+
     def selection_tournament(self):
         """Parent selector alternative
         Implementation of tournament selector.
