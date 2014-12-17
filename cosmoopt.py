@@ -354,7 +354,9 @@ else:
 rsolvtest = param0dic["rsolv@"] #take rsolv parameter defined in input parameter file
 
 if nptype=="claverie" or nptype=="claverietype":    
-    yrel0 = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+    #~ yrel0 = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+    yrel0 = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term
+
 else:
     yrel0 = 0
 
@@ -417,7 +419,9 @@ if calculationtype == 'mc':
 
             rsolvtest = paramtestdic["rsolv@"] #take rsolv parameter 
             if nptype=="claverie" or nptype=="claverietype":    
-                yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+                #~ yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+                yrel = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term
+
             else:
                 yrel = 0
 
@@ -520,7 +524,8 @@ elif calculationtype == 'ga':
         
         
         #number of step, to generate name of files
-        numberstep = next(step)
+        #~ numberstep = next(step)
+        numberstep = "0000"
         
         #fitness calculation
         fitnesslist = [] #store fitness
@@ -528,7 +533,8 @@ elif calculationtype == 'ga':
             paramtestdic = member.paramdic
             rsolvtest = paramtestdic["rsolv@"] #take rsolv parameter 
             if nptype=="claverie" or nptype=="claverietype":    
-                yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+                yrel = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term
+
             else:
                 yrel = 0
 
@@ -582,7 +588,7 @@ elif calculationtype == 'ga':
 elif calculationtype == 'minimize':
     from lmfit import minimize, Parameters, Parameter, report_fit, Minimizer
     acumcycle = 0
-    limitcycle = 2
+    limitcycle = 100
     cycleswithoutdown = 0
 
     
@@ -603,7 +609,8 @@ elif calculationtype == 'minimize':
         rsolvtest = paramdic["rsolv@"]
                 
         if nptype=="claverie" or nptype=="claverietype":
-            yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+            yrel = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term
+
         else:
             yrel = 0
             
@@ -718,7 +725,7 @@ elif calculationtype == 'gamin':
             paramtestdic[key]=values.value
         rsolvtest = paramtestdic["rsolv@"]
         if nptype=="claverie" or nptype=="claverietype":
-            yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+            yrel = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term
         else:
             yrel = 0
         totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000", paramtestdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
@@ -787,7 +794,7 @@ elif calculationtype == 'gamin':
             minparamtestdic = deepcopy(member.paramdic)
             rsolvtest = paramtestdic["rsolv@"] #take rsolv parameter 
             if nptype=="claverie" or nptype=="claverietype":    
-                yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+                yrel = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term 
             else:
                 yrel = 0
 
@@ -914,7 +921,7 @@ elif calculationtype == 'minstatics':
             paramtestdic[key]=values.value
         rsolvtest = paramtestdic["rsolv@"]
         if nptype=="claverie" or nptype=="claverietype":
-            yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+            yrel = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term        
         else:
             yrel = 0
         totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000", paramtestdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
@@ -987,7 +994,7 @@ elif calculationtype == 'minstatics':
                 paramtestdic[gammaselect] = gamma[0]
                 rsolvtest = paramtestdic["rsolv@"] #take rsolv parameter 
                 if nptype=="claverie" or nptype=="claverietype":    
-                    yrel = 4*PI*NS*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)*(rsolvtest*1.0E-10)/3.0 # ratio to use in claverie cavitation term
+                    yrel = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term
                 else:
                     yrel = 0
                 totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000", paramtestdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
@@ -1019,6 +1026,198 @@ elif calculationtype == 'minstatics':
         paramtestdic[radioselect] = minradio
         paramtestdic[gammaselect] = mingamma
                             
+        #~ if minmaebyelement < nextelementsymbol:
+        if nextelementsymbol == elementsymbol:
+
+            #minimize
+            params = Parameters()
+            for ikey, ivalue in paramtestdic.iteritems():
+                maxlimit = maxlimitdic[ikey]
+                minlimit = minlimitdic[ikey]
+                ikey = ikey.replace("@","zzz") #replace @ with zzz because this character is not supported by lmfit library
+                ikey = ikey.replace(".","xxx") #replace . with xxx because this character is not supported by lmfit library
+                #~ params.add(ikey, value=ivalue)
+                #~ if "rczzz" in ikey:
+                #~ params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
+                #~ else:
+                #~ params.add(ikey, ivalue, False)
+                params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
+                
+            print params
+            #experimental data
+            datacompoundnamelist = []
+            for ikey, ivalue in datadic.iteritems():
+                datacompoundnamelist.append(ikey) #to convert in error function to a dictionary
+
+            
+            cyclemin = 0
+            try:
+                result = minimize(fcn2min, params, args=(extrakeys, extrakeyssolv, outfile, nptype, datacompoundnamelist), method='powell')
+            except:
+                pass
+            
+            staticlist = run_minstatics(paramtestdic)
+            for staticbyelement in staticlist:
+                if elementsymbol in staticbyelement[1]:
+                    maebyelement = staticbyelement[0]
+                    if maebyelement < minmaebyelement:
+                        minmaebyelement = maebyelement
+                        minradio = radio[0]
+                        mingamma = gamma[0]
+                        nextelementsymbol = staticlist[0][1]
+                        nextmae = staticlist[0][0]
+                        minstaticlist = staticlist
+
+            #~ gammastepsize = gammastepsize * 0.8
+            #~ radiistepsize = radiistepsize * 0.8
+            #~ radiirange = radiirange * 0.8
+            #~ gammarange = gammarange * 0.8
+        else:
+            radiistepsize = initialradiistepsize
+            gammastepsize = initialgammastepsize
+            #~ radiirange = initialradiirange
+            #~ gammarange = initialgammarange
+            
+            
+        elementsymbol = nextelementsymbol
+        minmaebyelement = nextmae
+                    
+elif calculationtype == 'minstatics_slope':
+    def make_modification(value0,rangevalue,stepsize):
+        currentvalue = value0 - rangevalue
+        valuelist = []
+        while currentvalue < value0 + rangevalue:
+            valuelist.append([currentvalue,None])
+            currentvalue += stepsize
+        return valuelist
+    
+    
+    from lmfit import minimize, Parameters, Parameter, report_fit
+    maxcycleminimization = 30 #set minimization period
+
+    
+    #function to minimize
+    def fcn2min(params, extrakeys, extrakeyssolv, outfile, nptype, datacompoundnamelist):
+        global mintotalerror #the most minimal error
+        global ncycle #general count of cycles
+        global datadic #store experimental, calculated and contributions to solvation energies for all compounds
+        global paramtestdic # params to test
+        global cyclemin # cycle number of the period of minimization
+        #rebuild paramtestdic
+        paramtestdic={}
+        for key, values in params.iteritems():
+            key = key.replace("zzz","@") #change to original key formats
+            key = key.replace("xxx",".")
+            paramtestdic[key]=values.value
+        rsolvtest = paramtestdic["rsolv@"]
+        if nptype=="claverie" or nptype=="claverietype":
+            yrel = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term
+        else:
+            yrel = 0
+        totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000", paramtestdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
+        if totalerror < mintotalerror:
+            mintotalerror = totalerror
+            # write summary file with the low totalerror step
+            print_summary(mintotalerror, mae, rmse, bias, r2, slope, intercept, ncycle,datadic,nptype)
+            # write parameter values
+            paramout = open("list_param.out","w")
+            for key, value in sorted(paramtestdic.iteritems()):
+                paramout.write("%-3s \t %.5f\n" % (key,value))
+            paramout.close()
+
+        print "PASO %i: %f"%(cyclemin,totalerror)        
+        
+        if cyclemin >= maxcycleminimization:
+            cyclemin = 0
+            return
+        cyclemin += 1
+        return totalerror
+    
+    def run_minstatics(paramtestdic):
+        global datadic
+        staticlist = []
+        print "\n symbol rc@ g@ MAE RMSE BIAS slope intercept R2 eslope eintercept eR2"
+        for elementsymbol in ["C", "O", "N", "H", "F", "Cl", "Br", "P", "S"]:
+            #~ try:
+            mae, rmse, bias, r2, slope, intercept, errorr2, errorslope, errorintercept = calc_staticsbyelement("0000", datadic, elementsymbol)
+            radio = "rc@" + elementsymbol + ".a"
+            gamma = "g@" + elementsymbol + ".a"
+            print "<%s> %1.4f %1.4f %3.3f %3.3f %3.3f %3.3f %3.3f %1.4f %3.3f %3.3f %1.4f" % (elementsymbol, paramtestdic[radio], paramtestdic[gamma], mae, rmse, bias, slope, intercept, r2, errorslope, errorintercept, errorr2)
+            staticlist.append([mae,elementsymbol, paramtestdic[radio], paramtestdic[gamma],rmse, bias, slope, intercept, r2, errorslope, errorintercept, errorr2])
+        #~ except:
+            #~ print "<%s> sin compuestos" %(elementsymbol)
+        newstaticlist = sorted(staticlist, key=lambda lista: lista[0], reverse=True)
+        return newstaticlist
+    
+    
+    # select worst element (with the highest individual MAE contribution)
+    staticlist = run_minstatics(paramtestdic)
+    print staticlist
+    elementsymbol = staticlist[0][1]
+    minmaebyelement = staticlist[0][0]
+    
+    initialradiistepsize = 0.02
+    initialgammastepsize = 0.02
+    ncycle = 0
+    
+    radiistepsize = initialradiistepsize
+    gammastepsize = initialgammastepsize
+    
+    initialradiirange = radiirange
+    initialgammarange = gammarange    
+    initialstaticlist = deepcopy(staticlist)
+    
+    for staticelement in initialstaticlist: 
+        #~ elementsymbol = staticelement[1] #symbol
+        elementsymbol = "S"
+        minerrorslopebyelement = 100 #max slope
+        radioselect = "rc@" + elementsymbol + ".a"
+        gammaselect = "g@" + elementsymbol + ".a"
+        radiilist = make_modification(paramtestdic[radioselect],radiirange,radiistepsize)
+        gammalist = make_modification(paramtestdic[gammaselect],gammarange,gammastepsize)
+        
+        print "SELECTED %s : number test %i, radii step %f , gamma step %f" % (elementsymbol, len(radiilist)*len(gammalist), radiistepsize, gammastepsize)
+        
+        for radio in radiilist:
+            for gamma in gammalist:
+                paramtestdic[radioselect] = radio[0]
+                paramtestdic[gammaselect] = gamma[0]
+                rsolvtest = paramtestdic["rsolv@"] #take rsolv parameter 
+                if nptype=="claverie" or nptype=="claverietype":    
+                    yrel = 4*PI*NS*rsolvtest*rsolvtest*rsolvtest/3.0 # ratio to use in claverie cavitation term
+                else:
+                    yrel = 0
+                totalerror, mae, rmse, bias, r2, slope, intercept, datadic = calc_error("0000", paramtestdic, datadic, extrakeys, extrakeyssolv + " RSOLV=% .3f" % (rsolvtest), outfile, nptype, yrel)
+                staticlist = run_minstatics(paramtestdic)
+                
+                if totalerror < mintotalerror:
+                    mintotalerror = totalerror
+                    # write summary file with the low totalerror step
+                    print_summary(mintotalerror, mae, rmse, bias, r2, slope, intercept, ncycle,datadic,nptype)
+                    
+                    # write parameter values
+                    paramout = open("list_param.out","w")
+                    for key, value in sorted(paramtestdic.iteritems()):
+                        paramout.write("%-3s \t %.4f\n" % (key,value))
+                    paramout.close()
+                
+                for staticbyelement in staticlist:
+                    if elementsymbol in staticbyelement[1]:
+                        errorslopebyelement = abs(staticbyelement[9])
+                        
+                        if errorslopebyelement < minerrorslopebyelement:
+                            minerrorslopebyelement =errorslopebyelement
+                            minradio = radio[0]
+                            mingamma = gamma[0]
+                            #~ nextelementsymbol = staticlist[0][1]
+                            nextmae = staticlist[0][0]
+                            minstaticlist = staticlist
+                                
+                            
+        paramtestdic[radioselect] = minradio
+        paramtestdic[gammaselect] = mingamma
+               
+        """             
         if minmaebyelement < nextelementsymbol:
             if nextelementsymbol == elementsymbol:
                 
@@ -1066,19 +1265,19 @@ elif calculationtype == 'minstatics':
                 #~ radiirange = radiirange * 0.8
                 #~ gammarange = gammarange * 0.8
             else:
+            
                 radiistepsize = initialradiistepsize
                 gammastepsize = initialgammastepsize
                 #~ radiirange = initialradiirange
                 #~ gammarange = initialgammarange
                 
                 
-            elementsymbol = nextelementsymbol
-            minmaebyelement = nextmae
-                    
-
-    
-    print "\n symbol rc@ g@ MAE RMSE BIAS slope intercept R2 eslope eintercept eR2"
-    print minstaticlist
+            #~ elementsymbol = nextelementsymbol
+            #~ minmaebyelement = nextmae
+        """
+        print "minstatic"
+        print "\n symbol rc@ g@ MAE RMSE BIAS slope intercept R2 eslope eintercept eR2"
+        print minstaticlist
                         
     
     

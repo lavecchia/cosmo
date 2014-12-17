@@ -73,7 +73,7 @@ def mopacout_read(namefile):
         return heatformation,cosmoarea
     else:
         # try again,open file (horrible esto)
-        sleep(1.0)
+        time.sleep(1.0)
         mopacfile = open(namefile,"r")
         heatformation = None
         for line in mopacfile:
@@ -213,7 +213,8 @@ def atomicnumber_to_symbolmod(atomicnumber, enumber, paramdic):
 #transform parameter dictionary to MOPAC format VDW(Cl=2.33;Br=2.50...)
 def radii_to_text(paramdic):
     line = "VDW("
-    for key,value in paramdic.iteritems():
+    #~ for key,value in paramdic.iteritems():
+    for key,value in sorted(paramdic.items()): #error in Mopac read vdw radii: Cl instead C
         if "rc@" in key:
             symbol = key_to_symbol(key)
             line += str(symbol)+"="+str("{0:.4f}".format(value)+";")
@@ -236,7 +237,7 @@ def print_summary(totalerror, mae, rmse, bias, r2, slope, intercept,ncycle,datad
     summaryfile.write("Cycle: %i TotError: %2.4f MAE: %2.4f RMSE: %2.4f BIAS: %2.4f R2: %1.5f Slope: %2.3e Intercept: %2.3e" % (ncycle, totalerror, mae, rmse, bias, r2, slope, intercept) + "\n")
     
     if nptype == "claverie":
-        summaryfile.write("%-48s %s %s %s %s %s %s %s %s\n" % ("compoundname", "dgexp", "dgcalc", "error", "abserror","hof_gas","hof_cosmo","delta_hof","npterm(disp,cavitation)"))
+        summaryfile.write("%-48s %s %s %s %s %s %s %s %s\n" % ("compoundname", "dgexp", "dgcalc", "error", "abserror","hof_gas","hof_cosmo","delta_hof","npterm(cavitation,disp)"))
         reportlist =[]
         for compoundname,value in datadic.iteritems():
             reportlist.append([compoundname,datadic[compoundname]["dgexp"],datadic[compoundname]["dgcalc"],(datadic[compoundname]["dgexp"]-datadic[compoundname]["dgcalc"]), abs(datadic[compoundname]["dgexp"]-datadic[compoundname]["dgcalc"]),datadic[compoundname]["hofgas"],datadic[compoundname]["hofcosmo"], datadic[compoundname]["hofcosmo"] - datadic[compoundname]["hofgas"],datadic[compoundname]["cavitation"], datadic[compoundname]["dispterm"]])
@@ -349,8 +350,6 @@ def exec_commands(cmds, cores = DEFCORE):
     
 #calculation of cavitation term with simplified Pierotti equation
 def calc_pierotti(rsolv,rsphere,yrel):
-    rsolv = rsolv * 1.0E-10 # angstrom to m
-    rsphere = rsphere * 1.0E-10 # angstrom to m
     yratio = yrel/(1-yrel) 
     return RCONST*TEMP*(-math.log(1-yrel) + (3*yratio)*(rsphere/rsolv)+(3*yratio+4.5*(yratio)*(yratio))*(rsphere/rsolv)*(rsphere/rsolv)) * J2KCAL
 
@@ -390,8 +389,12 @@ def np_calc(cosmoparamlist,paramdic,nptype,yrel,electronlist=None):
             dispterm += gamma*cosmoarea*(rsolv+radii)*(rsolv+radii)/(radii*radii) #change to scale SES area to SAS: (r+Rsolv)^2/r^2
             
             #~ cavitationterm += calc_pierotti(rsolv,radii,yrel)*cosmoarea/((radii+rsolv)*(radii+rsolv)*PI*4/3) # sum of Claverie terms
-            cavitationterm += calc_pierotti(rsolv,radii,yrel)*cosmoarea/((radii)*(radii)*PI*4/3) # sum of Claverie terms
+            #~ cavitationterm += calc_pierotti(rsolv,radii+rsolv,yrel)*(cosmoarea/((radii+rsolv)*(radii+rsolv)*PI*4/3)) # sum of Claverie terms 0.42x+0.52
+            cavitationterm += calc_pierotti(rsolv,radii,yrel)*(cosmoarea/((radii+rsolv)*(radii+rsolv)*PI*4/3)) # sum of Claverie terms 1.37x+0.12
+            #~ cavitationterm += calc_pierotti(rsolv,radii,yrel)*(cosmoarea/((radii)*(radii)*PI*4/3)) # sum of Claverie terms 0.31x+1.21
+            #~ cavitationterm += calc_pierotti(rsolv,radii+rsolv,yrel)*(cosmoarea/((radii)*(radii)*PI*4/3)) # sum of Claverie terms 0.09x+2.76
             i += 1
+            
             
         npterm = dispterm + cavitationterm
         return npterm, dispterm, cavitationterm
