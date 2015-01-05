@@ -552,7 +552,7 @@ elif calculationtype == 'ga':
                     # write parameter values
                     paramout = open("list_param.out","w")
                     for key, value in sorted(paramtestdic.iteritems()):
-                        paramout.write("%-3s \t %.3f\n" % (key,value))
+                        paramout.write("%-3s \t %.4f\n" % (key,value))
                     paramout.close()
                                 
                     # ====================================================================
@@ -566,7 +566,8 @@ elif calculationtype == 'ga':
             else:
                 fitnesslist.append(member.fitness)
                 #add to fix write all individues in report file
-                prevline = "%-5s Err: %3.4f MAE: %3.4f RMSE: %3.4f BIAS: %3.4f R2: %1.5f " % (numberstep, totalerror, mae, rmse, bias, r2)
+                # i must to FIX this, totalerror, mae, rmse, bias, r2 were obtained of other member
+                prevline = "%-5s CALCULATED Err: %3.4f  " % (numberstep, 1/member.fitness**4)
                 outfile.write(prevline + print_param(paramtestdic))
         
         
@@ -590,7 +591,7 @@ elif calculationtype == 'minimize':
     acumcycle = 0
     limitcycle = 100
     cycleswithoutdown = 0
-
+    maxcycleminimization = 200
     
     def fcn2min(params, extrakeys, extrakeyssolv, outfile, nptype, datacompoundnamelist):
         global mintotalerror
@@ -598,6 +599,7 @@ elif calculationtype == 'minimize':
         global datadic
         global cycleswithoutdown
         global limitcycle
+        global maxcycleminimization
 
         #rebuild paramdic
         paramdic={}
@@ -631,6 +633,8 @@ elif calculationtype == 'minimize':
             if cycleswithoutdown > limitcycle:
                 return #exit function with error
             #~ shutil.rmtree(numberstep)
+        
+                
         shutil.rmtree("0000") # erase current directory
         print "PASO %i: %f"%(acumcycle,totalerror)
         acumcycle += 1
@@ -638,6 +642,8 @@ elif calculationtype == 'minimize':
         for i in range(0,len(datacompoundnamelist)):
             errors.append(datadic[datacompoundnamelist[i]]['dgexp']-datadic[datacompoundnamelist[i]]['dgcalc'])
         #~ return errors
+        if acumcycle >= maxcycleminimization:
+            return
         
         return totalerror
         
@@ -648,11 +654,11 @@ elif calculationtype == 'minimize':
         ikey = ikey.replace("@","zzz") #replace @ with zzz because this character is not supported by lmfit library
         ikey = ikey.replace(".","xxx") #replace . with xxx because this character is not supported by lmfit library
         #~ params.add(ikey, value=ivalue)
-        #~ if "rczzz" in ikey:
-        #~ params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
-        #~ else:
+        if "rsolv" in ikey:
+            params.add(ikey, ivalue, False)
+        else:
         #~ params.add(ikey, ivalue, False)
-        params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
+            params.add(ikey, value=ivalue, min=minlimit, max=maxlimit)
         
     print params
     #experimental data
@@ -805,8 +811,14 @@ elif calculationtype == 'gamin':
 
                 params = Parameters()
                 for ikey, ivalue in paramtestdic.iteritems():
-                    maxlimit = maxlimitdic[ikey]
-                    minlimit = minlimitdic[ikey]
+                    # add to fix params 20150105
+                    if ikey in fixlist:
+                        maxlimit = ivalue + 0.00000001
+                        minlimit = ivalue - 0.00000001
+                    else:
+                        maxlimit = maxlimitdic[ikey]
+                        minlimit = minlimitdic[ikey]
+                    
                     ikey = ikey.replace("@","zzz") #replace @ with zzz because this character is not supported by lmfit library
                     ikey = ikey.replace(".","xxx") #replace . with xxx because this character is not supported by lmfit library
                     #~ params.add(ikey, value=ivalue)

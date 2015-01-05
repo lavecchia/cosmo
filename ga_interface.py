@@ -82,6 +82,18 @@ class SetsGeneration(object):
                 
             if (paramdic["rc@P.a"]<paramdic["rc@N.a"]):
                 paramdic["rc@P.a"] = paramdic["rc@N.a"]
+                
+            
+            #halogen radii restriction
+            if (paramdic["rc@Cl.a"]<paramdic["rc@F.a"]):
+                paramdic["rc@Cl.a"] = paramdic["rc@F.a"]
+            
+            if (paramdic["rc@Br.a"]<paramdic["rc@Cl.a"]):
+                paramdic["rc@Br.a"] = paramdic["rc@Cl.a"]
+                
+            if (paramdic["rc@I.a"]<paramdic["rc@Br.a"]):
+                paramdic["rc@I.a"] = paramdic["rc@Br.a"]
+                
 
             newmemberlst.append(memberobj(paramdic))
 
